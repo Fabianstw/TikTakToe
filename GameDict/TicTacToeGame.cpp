@@ -114,6 +114,8 @@ private:
             return new_move;
         }
 
+        // TODO Min-Max Algorithm
+
         // nothing found to win or block, so choose a random number, because we are not that smart
         while (true) {
             int random_number = rand() % 9 + 1;
