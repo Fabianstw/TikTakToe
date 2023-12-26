@@ -1,0 +1,4 @@
+/Users/fabianstiewe/Applications/CLion.app/Contents/bin/cmake/mac/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/Users/fabianstiewe/Applications/CLion.app/Contents/bin/ninja/mac/x64/ninja -G Ninja -S "/Users/fabianstiewe/Desktop/Coding/Github Public/TikTakToe" -B "/Users/fabianstiewe/Desktop/Coding/Github Public/TikTakToe/cmake-build-debug"
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/fabianstiewe/Desktop/Coding/Github Public/TikTakToe/cmake-build-debug
