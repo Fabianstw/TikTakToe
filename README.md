@@ -8,3 +8,4 @@ First implementation trys of a MinMax Algorithm in TicTacToe.
   - Providing the rules, to directly win or block a possible win
   - Else the MinMax Algorithm
  
+Algorithm is working, but there is room for improvment in the runtime.
