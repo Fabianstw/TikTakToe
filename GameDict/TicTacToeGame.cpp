@@ -5,8 +5,8 @@
 
 #include <iostream>
 #include <array>
+#include <vector>
 #include <ctime>
-#include "TicTacToeGame.h"
 
 using namespace std;
 
@@ -17,6 +17,7 @@ class TicTacToeGame {
     array<array<string, 3>, 3> board;
 
 public:
+
     explicit TicTacToeGame(int getPlayer) {
 
         if (0 <= getPlayer && getPlayer < 2) {
@@ -52,9 +53,9 @@ private:
             while (counter < 9) {
 
                 // first get the player input
-                // do not simplify this, because of possible change of ai
+                // do not simplify this, because of possible change of AI
                 if (ai == true and player == 1) {
-                     player_input = getAIinput(counter);
+                     player_input = getAI_input(counter);
                 } else {
                     player_input = getPlayerInput();
                 }
@@ -67,7 +68,7 @@ private:
 
                 printBoard();
 
-                if (checkWinner()) {
+                if (checkWinner(board)) {
                     std::cout << "Player " << player << " won" << std::endl;
                     break;
                 }
@@ -94,7 +95,7 @@ private:
 
     }
 
-    int getAIinput (int round) {
+    int getAI_input (int round) {
 
         int new_move;
 
@@ -102,19 +103,30 @@ private:
             return 5;
         }
 
+        if (round == 1) {
+            if (board[1][1] == " ") {
+                return 5;
+            } else {
+                return 1;
+            }
+        }
+
         // check if it is possible to win in one move
-        new_move = checkIfAICanWinInOneMove();
+        new_move = checkIfAICanWinInOneMove(board);
         if (new_move != -1) {
             return new_move;
         }
 
         // check if the player can win in one move and block this possibility
-        new_move = checkIfPlayerCanWinInOneMove();
+        new_move = checkIfPlayerCanWinInOneMove(board);
         if (new_move != -1) {
             return new_move;
         }
 
-        // TODO Min-Max Algorithm
+        pair<int, int> answer = getAIinputMinMax(round, board, false);
+        if (0 <= answer.second && answer.second <= 8) {
+            return answer.second;
+        }
 
         // nothing found to win or block, so choose a random number, because we are not that smart
         while (true) {
@@ -127,50 +139,114 @@ private:
         // no return here should have returned before already
     }
 
-    int checkIfAICanWinInOneMove () {
+    pair<int, int> getAIinputMinMax (int round, const array<array<string, 3>, 3>& board_copy, bool player_here) {
+
+        // Calculate all possible games till the end
+        // win is 1, draw is 0, lose is -1
+        if (round == 9) {
+            // return 0 and an empty vector
+            return make_pair(0, -1);
+        }
+
+        // get all free fields
+        vector<int> free_fields;
+
+        for (int i = 0; i < 9; i++) {
+            if (board_copy[i / 3][i % 3] == " ") {
+                free_fields.push_back(i);
+            }
+        }
+
+        // save all the results
+        vector<int> results;
+        for (int free_field : free_fields) {
+
+            array<array<string, 3>, 3> board_copy_move = board_copy;
+            if (!player_here) {
+                board_copy_move[free_field / 3][free_field % 3] = "O";
+            } else {
+                board_copy_move[free_field / 3][free_field % 3] = "X";
+            }
+            pair<int, int> tmp = getAIinputMinMax(round + 1, board_copy_move, !player_here);
+
+            // check if AI has won
+            if (player_here) {
+                if (checkWinner(board_copy_move)) {
+                    // return -1 and an empty vector
+                    return make_pair(-1, -1);
+                }
+            // check if the player has won
+            } else {
+                if (checkWinner(board_copy_move)) {
+                    // return 1 and an empty vector
+                    return make_pair(1,free_field);
+                }
+            }
+
+            results.push_back(tmp.first);
+
+        }
+
+        int bestResult = player_here ? 2 : -2;  // Initialize bestResult based on player's turn
+        int move;
+        for (size_t i = 0; i < results.size(); ++i) {
+            int result = results[i];
+            int moveIndex = free_fields[i];
+
+            if ((player_here && result < bestResult) || (!player_here && result > bestResult)) {
+                bestResult = result;
+                move = moveIndex + 1;  // Update move based on the correct index in free_fields
+            }
+        }
+
+        return make_pair(bestResult, move);
+
+    }
+
+    static int checkIfAICanWinInOneMove (array<array<string, 3>, 3> board_copy) {
         // check the rows
         for (int i = 0; i < 3; i++) {
-            if (board[i][0] == board[i][1] && board[i][0] == "O" && board[i][2] == " ") {
+            if (board_copy[i][0] == board_copy[i][1] && board_copy[i][0] == "O" && board_copy[i][2] == " ") {
                 return 3*i + 3;
             }
-            if (board[i][1] == board[i][2] && board[i][1] == "O" && board[i][0] == " ") {
+            if (board_copy[i][1] == board_copy[i][2] && board_copy[i][1] == "O" && board_copy[i][0] == " ") {
                 return 3*i + 1;
             }
-            if (board[i][0] == board[i][2] && board[i][0] == "O" && board[i][1] == " ") {
+            if (board_copy[i][0] == board_copy[i][2] && board_copy[i][0] == "O" && board_copy[i][1] == " ") {
                 return 3*i + 2;
             }
         }
 
         // check the columns
         for (int i = 0; i < 3; i++) {
-            if (board[0][i] == board[1][i] && board[0][i] == "O" && board[2][i] == " ") {
-                return 3 + i;
+            if (board_copy[0][i] == board_copy[1][i] && board_copy[0][i] == "O" && board_copy[2][i] == " ") {
+                return 7 + i;
             }
-            if (board[1][i] == board[2][i] && board[1][i] == "O" && board[0][i] == " ") {
+            if (board_copy[1][i] == board_copy[2][i] && board_copy[1][i] == "O" && board_copy[0][i] == " ") {
                 return 1 + i;
             }
-            if (board[0][i] == board[2][i] && board[0][i] == "O" && board[1][i] == " ") {
-                return 2 + i;
+            if (board_copy[0][i] == board_copy[2][i] && board_copy[0][i] == "O" && board_copy[1][i] == " ") {
+                return 4 + i;
             }
         }
 
         // check the diagonals
-        if (board[0][0] == board[1][1] && board[0][0] == "O" && board[2][2] == " ") {
+        if (board_copy[0][0] == board_copy[1][1] && board_copy[0][0] == "O" && board_copy[2][2] == " ") {
             return 9;
         }
-        if (board[1][1] == board[2][2] && board[1][1] == "O" && board[0][0] == " ") {
+        if (board_copy[1][1] == board_copy[2][2] && board_copy[1][1] == "O" && board_copy[0][0] == " ") {
             return 1;
         }
-        if (board[0][0] == board[2][2] && board[0][0] == "O" && board[1][1] == " ") {
+        if (board_copy[0][0] == board_copy[2][2] && board_copy[0][0] == "O" && board_copy[1][1] == " ") {
             return 5;
         }
-        if (board[0][2] == board[1][1] && board[0][2] == "O" && board[2][0] == " ") {
+        if (board_copy[0][2] == board_copy[1][1] && board_copy[0][2] == "O" && board_copy[2][0] == " ") {
             return 7;
         }
-        if (board[1][1] == board[2][0] && board[1][1] == "O" && board[0][2] == " ") {
+        if (board_copy[1][1] == board_copy[2][0] && board_copy[1][1] == "O" && board_copy[0][2] == " ") {
             return 3;
         }
-        if (board[0][2] == board[2][0] && board[0][2] == "O" && board[1][1] == " ") {
+        if (board_copy[0][2] == board_copy[2][0] && board_copy[0][2] == "O" && board_copy[1][1] == " ") {
             return 5;
         }
 
@@ -178,51 +254,51 @@ private:
         return -1;
     }
 
-    int checkIfPlayerCanWinInOneMove () {
+    static int checkIfPlayerCanWinInOneMove (array<array<string, 3>, 3> board_copy) {
 
         // check the rows
         for (int i = 0; i < 3; i++) {
-            if (board[i][0] == board[i][1] && board[i][0] == "X" && board[i][2] == " ") {
+            if (board_copy[i][0] == board_copy[i][1] && board_copy[i][0] == "X" && board_copy[i][2] == " ") {
                 return 3*i + 3;
             }
-            if (board[i][1] == board[i][2] && board[i][1] == "X" && board[i][0] == " ") {
+            if (board_copy[i][1] == board_copy[i][2] && board_copy[i][1] == "X" && board_copy[i][0] == " ") {
                 return 3*i + 1;
             }
-            if (board[i][0] == board[i][2] && board[i][0] == "X" && board[i][1] == " ") {
+            if (board_copy[i][0] == board_copy[i][2] && board_copy[i][0] == "X" && board_copy[i][1] == " ") {
                 return 3*i + 2;
             }
         }
 
         // check the columns
         for (int i = 0; i < 3; i++) {
-            if (board[0][i] == board[1][i] && board[0][i] == "X" && board[2][i] == " ") {
-                return 3 + i;
+            if (board_copy[0][i] == board_copy[1][i] && board_copy[0][i] == "X" && board_copy[2][i] == " ") {
+                return 7 + i;
             }
-            if (board[1][i] == board[2][i] && board[1][i] == "X" && board[0][i] == " ") {
+            if (board_copy[1][i] == board_copy[2][i] && board_copy[1][i] == "X" && board_copy[0][i] == " ") {
                 return 1 + i;
             }
-            if (board[0][i] == board[2][i] && board[0][i] == "X" && board[1][i] == " ") {
-                return 2 + i;
+            if (board_copy[0][i] == board_copy[2][i] && board_copy[0][i] == "X" && board_copy[1][i] == " ") {
+                return 4 + i;
             }
         }
 
         // check the diagonals
-        if (board[0][0] == board[1][1] && board[0][0] == "X" && board[2][2] == " ") {
+        if (board_copy[0][0] == board_copy[1][1] && board_copy[0][0] == "X" && board_copy[2][2] == " ") {
             return 9;
         }
-        if (board[1][1] == board[2][2] && board[1][1] == "X" && board[0][0] == " ") {
+        if (board_copy[1][1] == board_copy[2][2] && board_copy[1][1] == "X" && board_copy[0][0] == " ") {
             return 1;
         }
-        if (board[0][0] == board[2][2] && board[0][0] == "X" && board[1][1] == " ") {
+        if (board_copy[0][0] == board_copy[2][2] && board_copy[0][0] == "X" && board_copy[1][1] == " ") {
             return 5;
         }
-        if (board[0][2] == board[1][1] && board[0][2] == "X" && board[2][0] == " ") {
+        if (board_copy[0][2] == board_copy[1][1] && board_copy[0][2] == "X" && board_copy[2][0] == " ") {
             return 7;
         }
-        if (board[1][1] == board[2][0] && board[1][1] == "X" && board[0][2] == " ") {
+        if (board_copy[1][1] == board_copy[2][0] && board_copy[1][1] == "X" && board_copy[0][2] == " ") {
             return 3;
         }
-        if (board[0][2] == board[2][0] && board[0][2] == "X" && board[1][1] == " ") {
+        if (board_copy[0][2] == board_copy[2][0] && board_copy[0][2] == "X" && board_copy[1][1] == " ") {
             return 5;
         }
 
@@ -230,29 +306,29 @@ private:
 
     }
 
-    bool checkWinner () {
+    static bool checkWinner (array<array<string, 3>, 3> board_copy) {
 
         // check if there is a winner
         // check the rows
         for (int i = 0; i < 3; i++) {
-            if (board[i][0] == board[i][1] && board[i][1] == board[i][2] && board[i][0] != " ") {
+            if (board_copy[i][0] == board_copy[i][1] && board_copy[i][1] == board_copy[i][2] && board_copy[i][0] != " ") {
                 return true;
             }
         }
 
         // check the columns
         for (int i = 0; i < 3; i++) {
-            if (board[0][i] == board[1][i] && board[1][i] == board[2][i] && board[0][i] != " ") {
+            if (board_copy[0][i] == board_copy[1][i] && board_copy[1][i] == board_copy[2][i] && board_copy[0][i] != " ") {
                 return true;
             }
         }
 
         // check the diagonals
-        if (board[0][0] == board[1][1] && board[1][1] == board[2][2] && board[0][0] != " ") {
+        if (board_copy[0][0] == board_copy[1][1] && board_copy[1][1] == board_copy[2][2] && board_copy[0][0] != " ") {
             return true;
         }
 
-        if (board[0][2] == board[1][1] && board[1][1] == board[2][0] && board[0][2] != " ") {
+        if (board_copy[0][2] == board_copy[1][1] && board_copy[1][1] == board_copy[2][0] && board_copy[0][2] != " ") {
             return true;
         }
 
